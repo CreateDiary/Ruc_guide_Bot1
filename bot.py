@@ -1,5 +1,6 @@
 # ============================================================
 # 🤖 Бот «Путеводитель РУК»
+# Меню студента и админка разделены
 # ============================================================
 
 import asyncio
@@ -40,7 +41,7 @@ dp = Dispatcher()
 
 
 # ============================================================
-# 📚 ДАННЫЕ О РУК
+# 📚 ДАННЫЕ
 # ============================================================
 
 RUK_INFO = {
@@ -180,6 +181,7 @@ class DelPlaceStates(StatesGroup):
 # ============================================================
 
 def main_menu(user_id: int = 0):
+    """Меню студента. У админа — с кнопкой Админ-панели."""
     keyboard = [
         [KeyboardButton(text="🧭 Путеводитель")],
         [KeyboardButton(text="⏰ Звонки")],
@@ -203,11 +205,12 @@ def back_menu():
 
 
 def admin_menu():
+    """Меню админа — с УНИКАЛЬНЫМИ кнопками (🔧)."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="👥 Группы"), KeyboardButton(text="📅 Расписание")],
-            [KeyboardButton(text="⏰ Звонки"), KeyboardButton(text="📢 Объявления")],
-            [KeyboardButton(text="📍 Карта мест")],
+            [KeyboardButton(text="🔧 Группы"), KeyboardButton(text="🔧 Расписание")],
+            [KeyboardButton(text="🔧 Звонки"), KeyboardButton(text="🔧 Объявления")],
+            [KeyboardButton(text="🔧 Карта мест")],
             [KeyboardButton(text="⬅️ В главное меню")],
         ],
         resize_keyboard=True,
@@ -284,7 +287,7 @@ def is_admin(user_id: int) -> bool:
 
 
 # ============================================================
-# 🚀 /start
+# 🚀 /start, /menu
 # ============================================================
 
 @dp.message(Command("start"))
@@ -341,7 +344,9 @@ async def back_to_admin(message: Message, state: FSMContext):
                          reply_markup=admin_menu())
 
 
-@dp.message(F.text == "👥 Группы")
+# ---------- Разделы админки (только 🔧 кнопки) ----------
+
+@dp.message(F.text == "🔧 Группы")
 async def admin_groups(message: Message):
     if not is_admin(message.from_user.id):
         return
@@ -350,7 +355,7 @@ async def admin_groups(message: Message):
                          reply_markup=admin_groups_menu())
 
 
-@dp.message(F.text == "📅 Расписание")
+@dp.message(F.text == "🔧 Расписание")
 async def admin_schedule(message: Message):
     if not is_admin(message.from_user.id):
         return
@@ -359,7 +364,7 @@ async def admin_schedule(message: Message):
                          reply_markup=admin_schedule_menu())
 
 
-@dp.message(F.text == "⏰ Звонки")
+@dp.message(F.text == "🔧 Звонки")
 async def admin_bells(message: Message):
     if not is_admin(message.from_user.id):
         return
@@ -373,7 +378,7 @@ async def admin_bells(message: Message):
     )
 
 
-@dp.message(F.text == "📢 Объявления")
+@dp.message(F.text == "🔧 Объявления")
 async def admin_ann(message: Message):
     if not is_admin(message.from_user.id):
         return
@@ -382,7 +387,7 @@ async def admin_ann(message: Message):
                          reply_markup=admin_ann_menu())
 
 
-@dp.message(F.text == "📍 Карта мест")
+@dp.message(F.text == "🔧 Карта мест")
 async def admin_places(message: Message):
     if not is_admin(message.from_user.id):
         return
@@ -391,7 +396,7 @@ async def admin_places(message: Message):
                          reply_markup=admin_places_menu())
 
 
-# ============ КНОПКИ-ДЕЙСТВИЯ ============
+# ---------- Кнопки-действия ----------
 
 @dp.message(F.text == "➕ Добавить группу")
 async def btn_add_group(message: Message, state: FSMContext):
@@ -519,11 +524,14 @@ async def btn_list_places(message: Message):
 
 
 # ============================================================
-# 💾 ОБРАБОТЧИКИ СОСТОЯНИЙ
+# 💾 ОБРАБОТЧИКИ СОСТОЯНИЙ (только для админа!)
 # ============================================================
 
 @dp.message(GroupStates.waiting_name)
 async def add_group_finish(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     name = message.text.strip()
     if name in GROUPS:
         await message.answer("⚠️ Такая группа уже есть.")
@@ -538,6 +546,9 @@ async def add_group_finish(message: Message, state: FSMContext):
 
 @dp.message(DelGroupStates.waiting_name)
 async def del_group_finish(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     name = message.text.strip()
     if name in GROUPS:
         GROUPS.remove(name)
@@ -555,6 +566,9 @@ async def del_group_finish(message: Message, state: FSMContext):
 
 @dp.message(ScheduleStates.waiting_group)
 async def set_sched_group(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     grp = message.text.strip()
     if grp not in GROUPS:
         GROUPS.append(grp)
@@ -567,6 +581,9 @@ async def set_sched_group(message: Message, state: FSMContext):
 
 @dp.message(ScheduleStates.waiting_day)
 async def set_sched_day(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     await state.update_data(day=message.text.strip())
     await state.set_state(ScheduleStates.waiting_pairs)
     await message.answer("📅 Шаг 3/3 — введи пары через запятую:\n\n"
@@ -576,6 +593,9 @@ async def set_sched_day(message: Message, state: FSMContext):
 
 @dp.message(ScheduleStates.waiting_pairs)
 async def set_sched_pairs(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     data = await state.get_data()
     grp, day = data["group"], data["day"]
     pairs = [p.strip() for p in message.text.split(",") if p.strip()]
@@ -590,6 +610,9 @@ async def set_sched_pairs(message: Message, state: FSMContext):
 
 @dp.message(DelDayStates.waiting_group)
 async def del_day_group(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     grp = message.text.strip()
     if grp not in SCHEDULE:
         await message.answer("❌ Группа не найдена.")
@@ -602,6 +625,9 @@ async def del_day_group(message: Message, state: FSMContext):
 
 @dp.message(DelDayStates.waiting_day)
 async def del_day_finish(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     data = await state.get_data()
     grp, day = data["group"], message.text.strip()
     if day in SCHEDULE.get(grp, {}):
@@ -633,6 +659,9 @@ async def set_bells_start(message: Message, state: FSMContext):
 
 @dp.message(BellsStates.waiting_data)
 async def set_bells_data(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     global BELLS
     try:
         lines = [l.strip() for l in message.text.split("\n") if l.strip()]
@@ -657,6 +686,9 @@ async def set_bells_data(message: Message, state: FSMContext):
 
 @dp.message(AnnounceStates.waiting_text)
 async def announce_send(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     text = message.text.strip()
     date = datetime.now().strftime("%d.%m.%Y %H:%M")
     ANNOUNCES.append({"text": text, "date": date})
@@ -679,6 +711,9 @@ async def announce_send(message: Message, state: FSMContext):
 
 @dp.message(DelAnnounceStates.waiting_number)
 async def del_ann_finish(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     try:
         idx = int(message.text.strip()) - 1
         if 0 <= idx < len(ANNOUNCES):
@@ -695,6 +730,9 @@ async def del_ann_finish(message: Message, state: FSMContext):
 
 @dp.message(PlaceStates.waiting_name)
 async def add_place_name(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     await state.update_data(name=message.text.strip())
     await state.set_state(PlaceStates.waiting_where)
     await message.answer("📍 Шаг 2/3 — *где находится* (например, `Корпус 3, 3 этаж`):",
@@ -703,6 +741,9 @@ async def add_place_name(message: Message, state: FSMContext):
 
 @dp.message(PlaceStates.waiting_where)
 async def add_place_where(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     await state.update_data(where=message.text.strip())
     await state.set_state(PlaceStates.waiting_steps)
     await message.answer("📍 Шаг 3/3 — *маршрут по шагам* (каждый с новой строки):",
@@ -711,6 +752,9 @@ async def add_place_where(message: Message, state: FSMContext):
 
 @dp.message(PlaceStates.waiting_steps)
 async def add_place_steps(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     data = await state.get_data()
     PLACES[data["name"]] = {"where": data["where"], "steps": message.text.strip()}
     _save(PLACES_FILE, PLACES)
@@ -722,6 +766,9 @@ async def add_place_steps(message: Message, state: FSMContext):
 
 @dp.message(DelPlaceStates.waiting_name)
 async def del_place_finish(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
     name = message.text.strip()
     if name in PLACES:
         del PLACES[name]
@@ -735,7 +782,8 @@ async def del_place_finish(message: Message, state: FSMContext):
 
 
 # ============================================================
-# 🧭 ПУТЕВОДИТЕЛЬ
+# 🧭 СТУДЕНЧЕСКИЕ РАЗДЕЛЫ
+# (у админа эти кнопки работают так же, как у студента)
 # ============================================================
 
 @dp.message(F.text == "🧭 Путеводитель")
@@ -764,10 +812,6 @@ async def show_route(callback: CallbackQuery):
                                   reply_markup=back_menu())
     await callback.answer()
 
-
-# ============================================================
-# 👥 МОЯ ГРУППА
-# ============================================================
 
 @dp.message(F.text == "👥 Моя группа")
 async def my_group(message: Message):
@@ -799,10 +843,6 @@ async def set_my_group(callback: CallbackQuery):
     await callback.answer()
 
 
-# ============================================================
-# ⏰ ЗВОНКИ
-# ============================================================
-
 @dp.message(F.text == "⏰ Звонки")
 async def bells_cmd(message: Message):
     if not BELLS:
@@ -813,10 +853,6 @@ async def bells_cmd(message: Message):
         text += f"🔔 *{b['name']}*  {b['start']} — {b['end']}  (⏸ {b['break']})\n"
     await send_typing(message, text, parse_mode="Markdown", reply_markup=back_menu())
 
-
-# ============================================================
-# 📅 РАСПИСАНИЕ
-# ============================================================
 
 @dp.message(F.text == "📅 Расписание")
 async def schedule_cmd(message: Message):
@@ -834,304 +870,4 @@ async def schedule_cmd(message: Message):
             for day in days
         ] + [[InlineKeyboardButton(text="🔄 Другая группа",
                                    callback_data="sched_all")]])
-        await send_typing(message, f"📅 *{my_grp}*\n\nВыбери день 👇",
-                          parse_mode="Markdown", reply_markup=kb)
-        return
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"📚 {grp}",
-                              callback_data=f"sched_grp:{grp}")]
-        for grp in SCHEDULE
-    ])
-    await send_typing(message, "📅 *Выбери группу:*",
-                      parse_mode="Markdown", reply_markup=kb)
-
-
-@dp.callback_query(F.data == "sched_all")
-async def sched_all(callback: CallbackQuery):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"📚 {grp}",
-                              callback_data=f"sched_grp:{grp}")]
-        for grp in SCHEDULE
-    ])
-    await callback.message.answer("📅 *Выбери группу:*",
-                                  parse_mode="Markdown", reply_markup=kb)
-    await callback.answer()
-
-
-@dp.callback_query(F.data.startswith("sched_grp:"))
-async def show_group_days(callback: CallbackQuery):
-    grp = callback.data.split(":", 1)[1]
-    days = SCHEDULE.get(grp, {})
-    if not days:
-        await callback.answer("Пусто", show_alert=True)
-        return
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"📆 {day}",
-                              callback_data=f"sched_day:{grp}:{day}")]
-        for day in days
-    ])
-    await callback.message.answer(f"📚 *{grp}*\n\nВыбери день 👇",
-                                  parse_mode="Markdown", reply_markup=kb)
-    await callback.answer()
-
-
-@dp.callback_query(F.data.startswith("sched_day:"))
-async def show_day(callback: CallbackQuery):
-    _, grp, day = callback.data.split(":", 2)
-    pairs = SCHEDULE.get(grp, {}).get(day, [])
-    if not pairs:
-        await callback.message.answer(f"📅 *{grp}, {day}*\n\n🎉 Пар нет!",
-                                      parse_mode="Markdown", reply_markup=back_menu())
-        await callback.answer()
-        return
-    text = f"📅 *{grp}, {day}*\n\n"
-    for i, pair in enumerate(pairs, 1):
-        text += f"*{i}.* {pair}\n"
-    await callback.message.answer(text, parse_mode="Markdown",
-                                  reply_markup=back_menu())
-    await callback.answer()
-
-
-# ============================================================
-# 📢 ОБЪЯВЛЕНИЯ
-# ============================================================
-
-@dp.message(F.text == "📢 Объявления")
-async def announces_cmd(message: Message):
-    if not ANNOUNCES:
-        await message.answer("📢 Объявлений нет.", reply_markup=back_menu())
-        return
-    text = "📢 *Объявления*\n\n"
-    for i, a in enumerate(ANNOUNCES, 1):
-        text += f"*{i}.* {a['text']}\n🕐 _{a['date']}_\n\n"
-    await send_typing(message, text, parse_mode="Markdown", reply_markup=back_menu())
-
-
-# ============================================================
-# 📋 ЧЕК-ЛИСТ
-# ============================================================
-
-CHECKLIST_ITEMS = [
-    "Познакомиться с куратором",
-    "Записать номер куратора",
-    "Узнать, где деканат (каб. 304)",
-    "Найти свою группу в расписании",
-    "Выбрать свою группу в боте",
-    "Найти библиотеку",
-    "Узнать, где столовая",
-    "Оформить студенческий",
-    "Получить логин/пароль от ЛК",
-    "Взять справку об обучении",
-    "Найти медкабинет",
-    "Познакомиться с группой",
-]
-
-
-def checklist_text(done):
-    text = "📋 *Чек-лист*\n\n"
-    for i, item in enumerate(CHECKLIST_ITEMS, 1):
-        mark = "✅" if i in done else "⬜"
-        text += f"{mark} {i}. {item}\n"
-    text += f"\nВыполнено: *{len(done)}/{len(CHECKLIST_ITEMS)}*"
-    return text
-
-
-def checklist_kb(done):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"{'✅' if i in done else '⬜'} {i}",
-                              callback_data=f"chk:{i}")]
-        for i in range(1, len(CHECKLIST_ITEMS) + 1)
-    ])
-
-
-@dp.message(F.text == "📋 Чек-лист")
-async def checklist_cmd(message: Message):
-    uid = str(message.from_user.id)
-    done = CHECKLISTS.get(uid, [])
-    await send_typing(message, checklist_text(done),
-                      parse_mode="Markdown", reply_markup=checklist_kb(done))
-
-
-@dp.callback_query(F.data.startswith("chk:"))
-async def toggle_check(callback: CallbackQuery):
-    idx = int(callback.data.split(":", 1)[1])
-    uid = str(callback.from_user.id)
-    done = CHECKLISTS.get(uid, [])
-    if idx in done:
-        done.remove(idx)
-    else:
-        done.append(idx)
-    CHECKLISTS[uid] = done
-    _save(CHECKLIST_FILE, CHECKLISTS)
-    try:
-        await callback.message.edit_text(checklist_text(done),
-                                         parse_mode="Markdown",
-                                         reply_markup=checklist_kb(done))
-    except Exception:
-        pass
-    await callback.answer()
-
-
-# ============================================================
-# 📖 СЛОВАРЬ
-# ============================================================
-
-DICTIONARY = {
-    "Пара": "Занятие 1,5 часа (90 минут).",
-    "Зачётка": "Зачётная книжка — документ с оценками.",
-    "Сессия": "Период сдачи зачётов и экзаменов.",
-    "Семестр": "Половина учебного года.",
-    "Академ": "Академический отпуск.",
-    "Куратор": "Преподаватель, закреплённый за группой.",
-    "Деканат": "Административный отдел по вопросам учёбы.",
-    "Ведомость": "Список студентов с оценками.",
-    "Отработка": "Занятие за пропуск.",
-    "Зачёт": "Форма проверки знаний без оценки.",
-    "Стипендия": "Выплата за хорошую учёбу.",
-    "ЛК": "Личный кабинет студента.",
-}
-
-
-@dp.message(F.text == "📖 Словарь")
-async def dict_cmd(message: Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=word, callback_data=f"dict:{word}")]
-        for word in DICTIONARY
-    ])
-    await send_typing(message, "📖 *Словарь студента*",
-                      parse_mode="Markdown", reply_markup=kb)
-
-
-@dp.callback_query(F.data.startswith("dict:"))
-async def show_dict(callback: CallbackQuery):
-    word = callback.data.split(":", 1)[1]
-    meaning = DICTIONARY.get(word)
-    if not meaning:
-        await callback.answer("Не найдено", show_alert=True)
-        return
-    await callback.message.answer(f"📖 *{word}*\n\n💡 {meaning}",
-                                  parse_mode="Markdown", reply_markup=back_menu())
-    await callback.answer()
-
-
-# ============================================================
-# 🆘 SOS
-# ============================================================
-
-SOS = {
-    "Потерял студенческий": "🆘 *Потерял студенческий*\n\n1️⃣ Сообщи в деканат (каб. 304).\n2️⃣ Напиши заявление.\n3️⃣ Получи новый билет.",
-    "Заболел и пропустил пары": "🆘 *Заболел*\n\n1️⃣ Возьми справку у врача.\n2️⃣ Отдай в деканат.\n3️⃣ Уточни у куратора.",
-    "Не нашёл кабинет": "🆘 *Не нашёл кабинет*\n\n1️⃣ Спроси у охраны.\n2️⃣ Найди стенд с расписанием.\n3️⃣ Используй «🧭 Путеводитель».",
-    "Не сдал зачёт": "🆘 *Не сдал зачёт*\n\n1️⃣ Узнай дату пересдачи.\n2️⃣ Подготовься.\n3️⃣ Приди вовремя.",
-}
-
-
-@dp.message(F.text == "🆘 SOS")
-async def sos_cmd(message: Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=q, callback_data=f"sos:{q}")]
-        for q in SOS
-    ])
-    await send_typing(message, "🆘 *Что делать, если…*",
-                      parse_mode="Markdown", reply_markup=kb)
-
-
-@dp.callback_query(F.data.startswith("sos:"))
-async def show_sos(callback: CallbackQuery):
-    q = callback.data.split(":", 1)[1]
-    ans = SOS.get(q)
-    if not ans:
-        await callback.answer("Не найдено", show_alert=True)
-        return
-    await callback.message.answer(ans, parse_mode="Markdown",
-                                  reply_markup=back_menu())
-    await callback.answer()
-
-
-# ============================================================
-# 🏛 О РУК / КОНТАКТЫ / ССЫЛКИ
-# ============================================================
-
-@dp.message(F.text == "🏛 О РУК")
-async def about_ruk(message: Message):
-    info = RUK_INFO
-    await send_typing(
-        message,
-        f"🏛 *{info['name']}*\n\n"
-        f"📅 *Основан:* {info['founded']}\n"
-        f"🏛 *Учредитель:* {info['founder']}\n\n"
-        f"📍 {info['address']}\n"
-        f"📞 {info['phone']}\n"
-        f"📞 {info['phone2']}\n"
-        f"✉️ {info['email']}\n"
-        f"🌐 {info['site']}\n"
-        f"🕐 {info['work_time']}",
-        parse_mode="Markdown", reply_markup=back_menu())
-
-
-@dp.message(F.text == "📞 Контакты")
-async def contacts(message: Message):
-    info = RUK_INFO
-    await send_typing(
-        message,
-        f"📞 *Контакты РУК*\n\n📍 {info['address']}\n"
-        f"☎️ {info['phone']}\n☎️ {info['phone2']}\n"
-        f"✉️ {info['email']}\n🌐 {info['site']}\n\n🕐 {info['work_time']}",
-        parse_mode="Markdown", reply_markup=back_menu())
-
-
-@dp.message(F.text == "🔗 Ссылки")
-async def links_cmd(message: Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🌐 Сайт РУК", url="https://ruc.su")],
-        [InlineKeyboardButton(text="👤 Личный кабинет", url="https://lk.ruc.su")],
-    ])
-    await send_typing(message, "🔗 *Ссылки:*",
-                      parse_mode="Markdown", reply_markup=kb)
-    await message.answer("👆 Выбери раздел", reply_markup=back_menu())
-
-
-# ============================================================
-# 🤔 FALLBACK
-# ============================================================
-
-@dp.message()
-async def fallback(message: Message):
-    await message.answer(
-        "🤔 Я тебя не понял. Воспользуйся кнопками меню.",
-        reply_markup=main_menu(message.from_user.id),
-    )
-
-
-# ============================================================
-# ▶️ ЗАПУСК + УСТАНОВКА КОМАНД (для кнопки «Меню»)
-# ============================================================
-
-async def main():
-    # Регистрируем команды — они появятся в синей кнопке «Меню»
-    commands = [
-        BotCommand(command="start", description="🚀 Запустить"),
-        BotCommand(command="menu", description="🏠 Меню"),
-        BotCommand(command="admin", description="👨‍💼 Админ-панель"),
-        BotCommand(command="bells", description="⏰ Звонки"),
-        BotCommand(command="schedule", description="📅 Расписание"),
-        BotCommand(command="announces", description="📢 Объявления"),
-        BotCommand(command="set_bells", description="🔧 Задать звонки"),
-        BotCommand(command="add_group", description="➕ Добавить группу"),
-        BotCommand(command="set_schedule", description="📅 Добавить расписание"),
-        BotCommand(command="announce", description="📢 Создать объявление"),
-        BotCommand(command="add_place", description="📍 Добавить место"),
-        BotCommand(command="help", description="❓ Помощь"),
-    ]
-    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
-
-    print("🧭 Бот «Путеводитель РУК» запущен...")
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        print("Бот остановлен")
+        await send_typing(message, f"📅 *{my_grp}*\n\nВыбери
