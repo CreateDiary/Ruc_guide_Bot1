@@ -13,6 +13,7 @@ from aiogram.filters import Command
 from aiogram.types import (
     Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
+    BotCommand, BotCommandScopeDefault,
 )
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.fsm.context import FSMContext
@@ -39,7 +40,7 @@ dp = Dispatcher()
 
 
 # ============================================================
-# 📚 ДАННЫЕ
+# 📚 ДАННЫЕ О РУК
 # ============================================================
 
 RUK_INFO = {
@@ -178,25 +179,84 @@ class DelPlaceStates(StatesGroup):
 # ⌨️ КЛАВИАТУРЫ
 # ============================================================
 
-def main_menu():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🧭 Путеводитель")],
-            [KeyboardButton(text="⏰ Звонки")],
-            [KeyboardButton(text="📅 Расписание")],
-            [KeyboardButton(text="👥 Моя группа")],
-            [KeyboardButton(text="📢 Объявления")],
-            [KeyboardButton(text="📋 Чек-лист"), KeyboardButton(text="📖 Словарь")],
-            [KeyboardButton(text="🆘 SOS"), KeyboardButton(text="🏛 О РУК")],
-            [KeyboardButton(text="📞 Контакты"), KeyboardButton(text="🔗 Ссылки")],
-        ],
-        resize_keyboard=True,
-    )
+def main_menu(user_id: int = 0):
+    keyboard = [
+        [KeyboardButton(text="🧭 Путеводитель")],
+        [KeyboardButton(text="⏰ Звонки")],
+        [KeyboardButton(text="📅 Расписание")],
+        [KeyboardButton(text="👥 Моя группа")],
+        [KeyboardButton(text="📢 Объявления")],
+        [KeyboardButton(text="📋 Чек-лист"), KeyboardButton(text="📖 Словарь")],
+        [KeyboardButton(text="🆘 SOS"), KeyboardButton(text="🏛 О РУК")],
+        [KeyboardButton(text="📞 Контакты"), KeyboardButton(text="🔗 Ссылки")],
+    ]
+    if user_id == ADMIN_ID:
+        keyboard.append([KeyboardButton(text="👨‍💼 Админ-панель")])
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
 def back_menu():
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="⬅️ В главное меню")]],
+        resize_keyboard=True,
+    )
+
+
+def admin_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="👥 Группы"), KeyboardButton(text="📅 Расписание")],
+            [KeyboardButton(text="⏰ Звонки"), KeyboardButton(text="📢 Объявления")],
+            [KeyboardButton(text="📍 Карта мест")],
+            [KeyboardButton(text="⬅️ В главное меню")],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def admin_groups_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="➕ Добавить группу")],
+            [KeyboardButton(text="🗑 Удалить группу")],
+            [KeyboardButton(text="📋 Список групп")],
+            [KeyboardButton(text="⬅️ Назад в админку")],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def admin_schedule_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="➕ Добавить пары")],
+            [KeyboardButton(text="🗑 Удалить день")],
+            [KeyboardButton(text="⬅️ Назад в админку")],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def admin_ann_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="➕ Новое объявление")],
+            [KeyboardButton(text="🗑 Удалить объявление")],
+            [KeyboardButton(text="🧹 Очистить объявления")],
+            [KeyboardButton(text="⬅️ Назад в админку")],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def admin_places_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="➕ Добавить место")],
+            [KeyboardButton(text="🗑 Удалить место")],
+            [KeyboardButton(text="📋 Список мест")],
+            [KeyboardButton(text="⬅️ Назад в админку")],
+        ],
         resize_keyboard=True,
     )
 
@@ -224,7 +284,7 @@ def is_admin(user_id: int) -> bool:
 
 
 # ============================================================
-# 🚀 /start и /help
+# 🚀 /start
 # ============================================================
 
 @dp.message(Command("start"))
@@ -239,34 +299,9 @@ async def cmd_start(message: Message, state: FSMContext):
         "🧭 Путеводитель\n⏰ Звонки\n📅 Расписание\n"
         "👥 Моя группа\n📢 Объявления\n📋 Чек-лист\n"
         "📖 Словарь\n🆘 SOS\n🏛 О РУК\n📞 Контакты\n🔗 Ссылки",
-        reply_markup=main_menu(),
+        reply_markup=main_menu(message.from_user.id),
         parse_mode="Markdown",
     )
-
-
-@dp.message(Command("help"))
-async def cmd_help(message: Message):
-    await message.answer(
-        "ℹ️ *Справка*\n\n"
-        "/start — запуск\n"
-        "/menu — меню\n"
-        "/bells — звонки\n"
-        "/schedule — расписание\n"
-        "/announces — объявления\n"
-        "/about — о боте",
-        parse_mode="Markdown",
-        reply_markup=main_menu(),
-    )
-
-
-@dp.message(Command("about"))
-async def cmd_about(message: Message):
-    await send_typing(
-        message,
-        "🤖 *О боте «Путеводитель РУК»*\n\n"
-        "Бот для студентов РУК.\n"
-        "Карта, расписание, объявления, чек-лист, словарь, SOS.",
-        parse_mode="Markdown", reply_markup=back_menu())
 
 
 @dp.message(Command("menu"))
@@ -274,53 +309,218 @@ async def cmd_about(message: Message):
 async def cmd_menu(message: Message, state: FSMContext):
     await state.clear()
     await send_typing(message, "🏠 *Главное меню*",
-                      parse_mode="Markdown", reply_markup=main_menu())
+                      parse_mode="Markdown",
+                      reply_markup=main_menu(message.from_user.id))
 
 
 # ============================================================
-# 👨‍💼 АДМИН-КОМАНДЫ
+# 👨‍💼 АДМИН-ПАНЕЛЬ
 # ============================================================
 
 @dp.message(Command("admin"))
-async def admin_cmd(message: Message, state: FSMContext):
+@dp.message(F.text == "👨‍💼 Админ-панель")
+async def admin_panel(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         await message.answer("⛔ Только для админа.")
         return
     await state.clear()
     await message.answer(
-        "👨‍💼 *Админ-панель*\n\n"
-        "👥 *Группы:*\n"
-        "/add_group — добавить\n"
-        "/del_group — удалить\n"
-        "/list_groups — список\n\n"
-        "📅 *Расписание:*\n"
-        "/set_schedule — добавить\n"
-        "/del_day — удалить день\n\n"
-        "⏰ *Звонки:*\n"
-        "/set_bells — задать\n\n"
-        "📢 *Объявления:*\n"
-        "/announce — создать\n"
-        "/del_announce — удалить\n"
-        "/clear_announces — очистить\n\n"
-        "📍 *Карта:*\n"
-        "/add_place — добавить\n"
-        "/del_place — удалить\n"
-        "/list_places — список",
+        "👨‍💼 *Админ-панель*\n\nВыбирай раздел 👇",
         parse_mode="Markdown",
+        reply_markup=admin_menu(),
     )
 
 
-# ---------- Группы ----------
-
-@dp.message(Command("add_group"))
-async def add_group_start(message: Message, state: FSMContext):
+@dp.message(F.text == "⬅️ Назад в админку")
+async def back_to_admin(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
+        return
+    await state.clear()
+    await message.answer("👨‍💼 *Админ-панель*",
+                         parse_mode="Markdown",
+                         reply_markup=admin_menu())
+
+
+@dp.message(F.text == "👥 Группы")
+async def admin_groups(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer("👥 *Управление группами*",
+                         parse_mode="Markdown",
+                         reply_markup=admin_groups_menu())
+
+
+@dp.message(F.text == "📅 Расписание")
+async def admin_schedule(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer("📅 *Управление расписанием*",
+                         parse_mode="Markdown",
+                         reply_markup=admin_schedule_menu())
+
+
+@dp.message(F.text == "⏰ Звонки")
+async def admin_bells(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer(
+        "⏰ *Звонки*\n\nОтправь список командой `/set_bells`",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад в админку")]],
+            resize_keyboard=True,
+        ),
+    )
+
+
+@dp.message(F.text == "📢 Объявления")
+async def admin_ann(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer("📢 *Управление объявлениями*",
+                         parse_mode="Markdown",
+                         reply_markup=admin_ann_menu())
+
+
+@dp.message(F.text == "📍 Карта мест")
+async def admin_places(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer("📍 *Управление картой*",
+                         parse_mode="Markdown",
+                         reply_markup=admin_places_menu())
+
+
+# ============ КНОПКИ-ДЕЙСТВИЯ ============
+
+@dp.message(F.text == "➕ Добавить группу")
+async def btn_add_group(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
         return
     await state.set_state(GroupStates.waiting_name)
     await message.answer("👥 Введи название группы (например, `ИС-11`):",
                          parse_mode="Markdown")
 
+
+@dp.message(F.text == "🗑 Удалить группу")
+async def btn_del_group(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    if not GROUPS:
+        await message.answer("Групп нет.")
+        return
+    await state.set_state(DelGroupStates.waiting_name)
+    lst = ", ".join(f"`{g}`" for g in GROUPS)
+    await message.answer(f"Введи группу для удаления:\n{lst}",
+                         parse_mode="Markdown")
+
+
+@dp.message(F.text == "📋 Список групп")
+async def btn_list_groups(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    if not GROUPS:
+        await message.answer("Групп нет.", reply_markup=admin_menu())
+        return
+    text = "👥 *Группы:*\n\n"
+    for g in GROUPS:
+        days = ", ".join(SCHEDULE.get(g, {}).keys()) or "—"
+        text += f"📚 *{g}* — дни: {days}\n"
+    await message.answer(text, parse_mode="Markdown", reply_markup=admin_menu())
+
+
+@dp.message(F.text == "➕ Добавить пары")
+async def btn_add_pairs(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    await state.set_state(ScheduleStates.waiting_group)
+    await message.answer("📅 Шаг 1/3 — введи *название группы*:",
+                         parse_mode="Markdown")
+
+
+@dp.message(F.text == "🗑 Удалить день")
+async def btn_del_day(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    if not SCHEDULE:
+        await message.answer("Расписание пусто.")
+        return
+    await state.set_state(DelDayStates.waiting_group)
+    groups = ", ".join(f"`{g}`" for g in SCHEDULE)
+    await message.answer(f"Введи группу:\n{groups}", parse_mode="Markdown")
+
+
+@dp.message(F.text == "➕ Новое объявление")
+async def btn_new_ann(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    await state.set_state(AnnounceStates.waiting_text)
+    await message.answer("📢 Напиши текст объявления:")
+
+
+@dp.message(F.text == "🗑 Удалить объявление")
+async def btn_del_ann(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    if not ANNOUNCES:
+        await message.answer("Объявлений нет.")
+        return
+    text = "📢 *Объявления:*\n\n"
+    for i, a in enumerate(ANNOUNCES, 1):
+        text += f"*{i}.* {a['text'][:60]}...\n"
+    text += "\nВведи *номер*:"
+    await state.set_state(DelAnnounceStates.waiting_number)
+    await message.answer(text, parse_mode="Markdown")
+
+
+@dp.message(F.text == "🧹 Очистить объявления")
+async def btn_clear_ann(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    global ANNOUNCES
+    ANNOUNCES = []
+    _save(ANNOUNCES_FILE, ANNOUNCES)
+    msg = await message.answer("✅ Очищено", reply_markup=admin_menu())
+    await auto_delete(msg, 5)
+
+
+@dp.message(F.text == "➕ Добавить место")
+async def btn_add_place(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    await state.set_state(PlaceStates.waiting_name)
+    await message.answer("📍 Шаг 1/3 — введи *название* (например, `📚 Библиотека`):",
+                         parse_mode="Markdown")
+
+
+@dp.message(F.text == "🗑 Удалить место")
+async def btn_del_place(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    if not PLACES:
+        await message.answer("Карта пуста.")
+        return
+    await state.set_state(DelPlaceStates.waiting_name)
+    lst = "\n".join(f"• `{n}`" for n in PLACES)
+    await message.answer(f"Введи название:\n\n{lst}", parse_mode="Markdown")
+
+
+@dp.message(F.text == "📋 Список мест")
+async def btn_list_places(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    if not PLACES:
+        await message.answer("Карта пуста.", reply_markup=admin_menu())
+        return
+    text = "📍 *Места на карте:*\n\n"
+    for name, p in PLACES.items():
+        text += f"• *{name}* — {p['where']}\n"
+    await message.answer(text, parse_mode="Markdown", reply_markup=admin_menu())
+
+
+# ============================================================
+# 💾 ОБРАБОТЧИКИ СОСТОЯНИЙ
+# ============================================================
 
 @dp.message(GroupStates.waiting_name)
 async def add_group_finish(message: Message, state: FSMContext):
@@ -332,22 +532,8 @@ async def add_group_finish(message: Message, state: FSMContext):
     _save(GROUPS_FILE, GROUPS)
     await state.clear()
     msg = await message.answer(f"✅ Группа *{name}* добавлена",
-                               parse_mode="Markdown", reply_markup=main_menu())
+                               parse_mode="Markdown", reply_markup=admin_menu())
     await auto_delete(msg, 5)
-
-
-@dp.message(Command("del_group"))
-async def del_group_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    if not GROUPS:
-        await message.answer("Групп нет.")
-        return
-    await state.set_state(DelGroupStates.waiting_name)
-    lst = ", ".join(f"`{g}`" for g in GROUPS)
-    await message.answer(f"Введи группу для удаления:\n{lst}",
-                         parse_mode="Markdown")
 
 
 @dp.message(DelGroupStates.waiting_name)
@@ -361,37 +547,10 @@ async def del_group_finish(message: Message, state: FSMContext):
             _save(SCHEDULE_FILE, SCHEDULE)
         await state.clear()
         msg = await message.answer(f"✅ Группа *{name}* удалена",
-                                   parse_mode="Markdown", reply_markup=main_menu())
+                                   parse_mode="Markdown", reply_markup=admin_menu())
         await auto_delete(msg, 5)
     else:
         await message.answer("❌ Группа не найдена.")
-
-
-@dp.message(Command("list_groups"))
-async def list_groups(message: Message):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    if not GROUPS:
-        await message.answer("Групп нет.")
-        return
-    text = "👥 *Группы:*\n\n"
-    for g in GROUPS:
-        days = ", ".join(SCHEDULE.get(g, {}).keys()) or "—"
-        text += f"📚 *{g}* — дни: {days}\n"
-    await message.answer(text, parse_mode="Markdown")
-
-
-# ---------- Расписание ----------
-
-@dp.message(Command("set_schedule"))
-async def set_sched_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    await state.set_state(ScheduleStates.waiting_group)
-    await message.answer("📅 Шаг 1/3 — введи *название группы*:",
-                         parse_mode="Markdown")
 
 
 @dp.message(ScheduleStates.waiting_group)
@@ -425,21 +584,8 @@ async def set_sched_pairs(message: Message, state: FSMContext):
     await state.clear()
     msg = await message.answer(
         f"✅ Расписание для *{grp}* ({day}) сохранено!\nПар: {len(pairs)}",
-        parse_mode="Markdown", reply_markup=main_menu())
+        parse_mode="Markdown", reply_markup=admin_menu())
     await auto_delete(msg, 5)
-
-
-@dp.message(Command("del_day"))
-async def del_day_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    if not SCHEDULE:
-        await message.answer("Расписание пусто.")
-        return
-    await state.set_state(DelDayStates.waiting_group)
-    groups = ", ".join(f"`{g}`" for g in SCHEDULE)
-    await message.answer(f"Введи группу:\n{groups}", parse_mode="Markdown")
 
 
 @dp.message(DelDayStates.waiting_group)
@@ -465,13 +611,11 @@ async def del_day_finish(message: Message, state: FSMContext):
         _save(SCHEDULE_FILE, SCHEDULE)
         await state.clear()
         msg = await message.answer(f"✅ Удалено: {grp}, {day}",
-                                   reply_markup=main_menu())
+                                   reply_markup=admin_menu())
         await auto_delete(msg, 5)
     else:
         await message.answer("❌ День не найден.")
 
-
-# ---------- Звонки ----------
 
 @dp.message(Command("set_bells"))
 async def set_bells_start(message: Message, state: FSMContext):
@@ -483,8 +627,7 @@ async def set_bells_start(message: Message, state: FSMContext):
         "⏰ Отправь список — каждая строка:\n"
         "`название, начало, конец, перемена`\n\n"
         "Пример:\n"
-        "`1 пара, 09:00, 10:30, 10 мин`\n"
-        "`2 пара, 10:40, 12:10, 30 мин`",
+        "`1 пара, 09:00, 10:30, 10 мин`",
         parse_mode="Markdown")
 
 
@@ -506,23 +649,10 @@ async def set_bells_data(message: Message, state: FSMContext):
         _save(BELLS_FILE, BELLS)
         await state.clear()
         msg = await message.answer(f"✅ Звонки обновлены ({len(BELLS)})",
-                                   reply_markup=main_menu())
+                                   reply_markup=admin_menu())
         await auto_delete(msg, 5)
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка: {e}\n\n"
-                             "Формат: `название, начало, конец, перемена`",
-                             parse_mode="Markdown")
-
-
-# ---------- Объявления ----------
-
-@dp.message(Command("announce"))
-async def announce_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    await state.set_state(AnnounceStates.waiting_text)
-    await message.answer("📢 Напиши текст объявления:")
+        await message.answer(f"⚠️ Ошибка: {e}", parse_mode="Markdown")
 
 
 @dp.message(AnnounceStates.waiting_text)
@@ -544,23 +674,7 @@ async def announce_send(message: Message, state: FSMContext):
             pass
 
     await message.answer(f"✅ Отправлено: {sent} из {len(USERS)}",
-                         reply_markup=main_menu())
-
-
-@dp.message(Command("del_announce"))
-async def del_ann_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    if not ANNOUNCES:
-        await message.answer("Объявлений нет.")
-        return
-    text = "📢 *Объявления:*\n\n"
-    for i, a in enumerate(ANNOUNCES, 1):
-        text += f"*{i}.* {a['text'][:60]}...\n"
-    text += "\nВведи *номер*:"
-    await state.set_state(DelAnnounceStates.waiting_number)
-    await message.answer(text, parse_mode="Markdown")
+                         reply_markup=admin_menu())
 
 
 @dp.message(DelAnnounceStates.waiting_number)
@@ -571,36 +685,12 @@ async def del_ann_finish(message: Message, state: FSMContext):
             del ANNOUNCES[idx]
             _save(ANNOUNCES_FILE, ANNOUNCES)
             await state.clear()
-            msg = await message.answer("✅ Удалено", reply_markup=main_menu())
+            msg = await message.answer("✅ Удалено", reply_markup=admin_menu())
             await auto_delete(msg, 5)
         else:
             await message.answer("❌ Неверный номер.")
     except ValueError:
         await message.answer("❌ Введи число.")
-
-
-@dp.message(Command("clear_announces"))
-async def clear_ann(message: Message):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    global ANNOUNCES
-    ANNOUNCES = []
-    _save(ANNOUNCES_FILE, ANNOUNCES)
-    msg = await message.answer("✅ Очищено", reply_markup=main_menu())
-    await auto_delete(msg, 5)
-
-
-# ---------- Карта мест ----------
-
-@dp.message(Command("add_place"))
-async def add_place_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    await state.set_state(PlaceStates.waiting_name)
-    await message.answer("📍 Шаг 1/3 — введи *название* (например, `📚 Библиотека`):",
-                         parse_mode="Markdown")
 
 
 @dp.message(PlaceStates.waiting_name)
@@ -626,21 +716,8 @@ async def add_place_steps(message: Message, state: FSMContext):
     _save(PLACES_FILE, PLACES)
     await state.clear()
     msg = await message.answer(f"✅ Место *{data['name']}* добавлено!",
-                               parse_mode="Markdown", reply_markup=main_menu())
+                               parse_mode="Markdown", reply_markup=admin_menu())
     await auto_delete(msg, 5)
-
-
-@dp.message(Command("del_place"))
-async def del_place_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    if not PLACES:
-        await message.answer("Карта пуста.")
-        return
-    await state.set_state(DelPlaceStates.waiting_name)
-    lst = "\n".join(f"• `{n}`" for n in PLACES)
-    await message.answer(f"Введи название:\n\n{lst}", parse_mode="Markdown")
 
 
 @dp.message(DelPlaceStates.waiting_name)
@@ -651,24 +728,10 @@ async def del_place_finish(message: Message, state: FSMContext):
         _save(PLACES_FILE, PLACES)
         await state.clear()
         msg = await message.answer(f"✅ Удалено: *{name}*",
-                                   parse_mode="Markdown", reply_markup=main_menu())
+                                   parse_mode="Markdown", reply_markup=admin_menu())
         await auto_delete(msg, 5)
     else:
         await message.answer("❌ Не найдено.")
-
-
-@dp.message(Command("list_places"))
-async def list_places(message: Message):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ Только для админа.")
-        return
-    if not PLACES:
-        await message.answer("Карта пуста.")
-        return
-    text = "📍 *Места на карте:*\n\n"
-    for name, p in PLACES.items():
-        text += f"• *{name}* — {p['where']}\n"
-    await message.answer(text, parse_mode="Markdown")
 
 
 # ============================================================
@@ -740,7 +803,6 @@ async def set_my_group(callback: CallbackQuery):
 # ⏰ ЗВОНКИ
 # ============================================================
 
-@dp.message(Command("bells"))
 @dp.message(F.text == "⏰ Звонки")
 async def bells_cmd(message: Message):
     if not BELLS:
@@ -756,7 +818,6 @@ async def bells_cmd(message: Message):
 # 📅 РАСПИСАНИЕ
 # ============================================================
 
-@dp.message(Command("schedule"))
 @dp.message(F.text == "📅 Расписание")
 async def schedule_cmd(message: Message):
     if not SCHEDULE:
@@ -836,7 +897,6 @@ async def show_day(callback: CallbackQuery):
 # 📢 ОБЪЯВЛЕНИЯ
 # ============================================================
 
-@dp.message(Command("announces"))
 @dp.message(F.text == "📢 Объявления")
 async def announces_cmd(message: Message):
     if not ANNOUNCES:
@@ -960,30 +1020,10 @@ async def show_dict(callback: CallbackQuery):
 # ============================================================
 
 SOS = {
-    "Потерял студенческий": (
-        "🆘 *Потерял студенческий*\n\n"
-        "1️⃣ Сообщи в деканат (каб. 304).\n"
-        "2️⃣ Напиши заявление.\n"
-        "3️⃣ Получи новый билет."
-    ),
-    "Заболел и пропустил пары": (
-        "🆘 *Заболел*\n\n"
-        "1️⃣ Возьми справку у врача.\n"
-        "2️⃣ Отдай в деканат.\n"
-        "3️⃣ Уточни у куратора об отработке."
-    ),
-    "Не нашёл кабинет": (
-        "🆘 *Не нашёл кабинет*\n\n"
-        "1️⃣ Спроси у охраны.\n"
-        "2️⃣ Найди стенд с расписанием.\n"
-        "3️⃣ Используй «🧭 Путеводитель»."
-    ),
-    "Не сдал зачёт": (
-        "🆘 *Не сдал зачёт*\n\n"
-        "1️⃣ Узнай дату пересдачи.\n"
-        "2️⃣ Подготовься.\n"
-        "3️⃣ Приди вовремя."
-    ),
+    "Потерял студенческий": "🆘 *Потерял студенческий*\n\n1️⃣ Сообщи в деканат (каб. 304).\n2️⃣ Напиши заявление.\n3️⃣ Получи новый билет.",
+    "Заболел и пропустил пары": "🆘 *Заболел*\n\n1️⃣ Возьми справку у врача.\n2️⃣ Отдай в деканат.\n3️⃣ Уточни у куратора.",
+    "Не нашёл кабинет": "🆘 *Не нашёл кабинет*\n\n1️⃣ Спроси у охраны.\n2️⃣ Найди стенд с расписанием.\n3️⃣ Используй «🧭 Путеводитель».",
+    "Не сдал зачёт": "🆘 *Не сдал зачёт*\n\n1️⃣ Узнай дату пересдачи.\n2️⃣ Подготовься.\n3️⃣ Приди вовремя.",
 }
 
 
@@ -1053,22 +1093,39 @@ async def links_cmd(message: Message):
 
 
 # ============================================================
-# 🤔 FALLBACK — САМЫМ ПОСЛЕДНИМ!
+# 🤔 FALLBACK
 # ============================================================
 
 @dp.message()
 async def fallback(message: Message):
     await message.answer(
-        "🤔 Я тебя не понял. Воспользуйся кнопками меню или /menu.",
-        reply_markup=main_menu(),
+        "🤔 Я тебя не понял. Воспользуйся кнопками меню.",
+        reply_markup=main_menu(message.from_user.id),
     )
 
 
 # ============================================================
-# ▶️ ЗАПУСК
+# ▶️ ЗАПУСК + УСТАНОВКА КОМАНД (для кнопки «Меню»)
 # ============================================================
 
 async def main():
+    # Регистрируем команды — они появятся в синей кнопке «Меню»
+    commands = [
+        BotCommand(command="start", description="🚀 Запустить"),
+        BotCommand(command="menu", description="🏠 Меню"),
+        BotCommand(command="admin", description="👨‍💼 Админ-панель"),
+        BotCommand(command="bells", description="⏰ Звонки"),
+        BotCommand(command="schedule", description="📅 Расписание"),
+        BotCommand(command="announces", description="📢 Объявления"),
+        BotCommand(command="set_bells", description="🔧 Задать звонки"),
+        BotCommand(command="add_group", description="➕ Добавить группу"),
+        BotCommand(command="set_schedule", description="📅 Добавить расписание"),
+        BotCommand(command="announce", description="📢 Создать объявление"),
+        BotCommand(command="add_place", description="📍 Добавить место"),
+        BotCommand(command="help", description="❓ Помощь"),
+    ]
+    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+
     print("🧭 Бот «Путеводитель РУК» запущен...")
     await dp.start_polling(bot)
 
