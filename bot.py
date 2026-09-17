@@ -224,7 +224,61 @@ def is_admin(user_id: int) -> bool:
 
 
 # ============================================================
-# 👨‍💼 АДМИН-КОМАНДЫ (сверху — чтобы точно работали)
+# 🚀 /start и /help
+# ============================================================
+
+@dp.message(Command("start"))
+async def cmd_start(message: Message, state: FSMContext):
+    await state.clear()
+    USERS.add(message.from_user.id)
+    save_users()
+
+    await message.answer(
+        f"👋 Привет, *{message.from_user.first_name}*!\n\n"
+        "Я — *Путеводитель РУК* 🧭\n\n"
+        "🧭 Путеводитель\n⏰ Звонки\n📅 Расписание\n"
+        "👥 Моя группа\n📢 Объявления\n📋 Чек-лист\n"
+        "📖 Словарь\n🆘 SOS\n🏛 О РУК\n📞 Контакты\n🔗 Ссылки",
+        reply_markup=main_menu(),
+        parse_mode="Markdown",
+    )
+
+
+@dp.message(Command("help"))
+async def cmd_help(message: Message):
+    await message.answer(
+        "ℹ️ *Справка*\n\n"
+        "/start — запуск\n"
+        "/menu — меню\n"
+        "/bells — звонки\n"
+        "/schedule — расписание\n"
+        "/announces — объявления\n"
+        "/about — о боте",
+        parse_mode="Markdown",
+        reply_markup=main_menu(),
+    )
+
+
+@dp.message(Command("about"))
+async def cmd_about(message: Message):
+    await send_typing(
+        message,
+        "🤖 *О боте «Путеводитель РУК»*\n\n"
+        "Бот для студентов РУК.\n"
+        "Карта, расписание, объявления, чек-лист, словарь, SOS.",
+        parse_mode="Markdown", reply_markup=back_menu())
+
+
+@dp.message(Command("menu"))
+@dp.message(F.text == "⬅️ В главное меню")
+async def cmd_menu(message: Message, state: FSMContext):
+    await state.clear()
+    await send_typing(message, "🏠 *Главное меню*",
+                      parse_mode="Markdown", reply_markup=main_menu())
+
+
+# ============================================================
+# 👨‍💼 АДМИН-КОМАНДЫ
 # ============================================================
 
 @dp.message(Command("admin"))
@@ -235,24 +289,23 @@ async def admin_cmd(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         "👨‍💼 *Админ-панель*\n\n"
-        "Вводи команды вручную:\n\n"
         "👥 *Группы:*\n"
-        "/add_group — добавить группу\n"
-        "/del_group — удалить группу\n"
-        "/list_groups — список групп\n\n"
+        "/add_group — добавить\n"
+        "/del_group — удалить\n"
+        "/list_groups — список\n\n"
         "📅 *Расписание:*\n"
-        "/set_schedule — добавить пары\n"
+        "/set_schedule — добавить\n"
         "/del_day — удалить день\n\n"
         "⏰ *Звонки:*\n"
-        "/set_bells — задать звонки\n\n"
+        "/set_bells — задать\n\n"
         "📢 *Объявления:*\n"
         "/announce — создать\n"
         "/del_announce — удалить\n"
         "/clear_announces — очистить\n\n"
         "📍 *Карта:*\n"
-        "/add_place — добавить место\n"
-        "/del_place — удалить место\n"
-        "/list_places — список мест",
+        "/add_place — добавить\n"
+        "/del_place — удалить\n"
+        "/list_places — список",
         parse_mode="Markdown",
     )
 
@@ -619,35 +672,6 @@ async def list_places(message: Message):
 
 
 # ============================================================
-# 🚀 ОБЫЧНЫЕ КОМАНДЫ
-# ============================================================
-
-@dp.message(Command("start"))
-async def cmd_start(message: Message, state: FSMContext):
-    await state.clear()
-    USERS.add(message.from_user.id)
-    save_users()
-
-    await message.answer(
-        f"👋 Привет, *{message.from_user.first_name}*!\n\n"
-        "Я — *Путеводитель РУК* 🧭\n\n"
-        "🧭 Путеводитель\n⏰ Звонки\n📅 Расписание\n"
-        "👥 Моя группа\n📢 Объявления\n📋 Чек-лист\n"
-        "📖 Словарь\n🆘 SOS\n🏛 О РУК\n📞 Контакты\n🔗 Ссылки",
-        reply_markup=main_menu(),
-        parse_mode="Markdown",
-    )
-
-
-@dp.message(Command("menu"))
-@dp.message(F.text == "⬅️ В главное меню")
-async def cmd_menu(message: Message, state: FSMContext):
-    await state.clear()
-    await send_typing(message, "🏠 *Главное меню*",
-                      parse_mode="Markdown", reply_markup=main_menu())
-
-
-# ============================================================
 # 🧭 ПУТЕВОДИТЕЛЬ
 # ============================================================
 
@@ -716,6 +740,7 @@ async def set_my_group(callback: CallbackQuery):
 # ⏰ ЗВОНКИ
 # ============================================================
 
+@dp.message(Command("bells"))
 @dp.message(F.text == "⏰ Звонки")
 async def bells_cmd(message: Message):
     if not BELLS:
@@ -731,6 +756,7 @@ async def bells_cmd(message: Message):
 # 📅 РАСПИСАНИЕ
 # ============================================================
 
+@dp.message(Command("schedule"))
 @dp.message(F.text == "📅 Расписание")
 async def schedule_cmd(message: Message):
     if not SCHEDULE:
@@ -810,6 +836,7 @@ async def show_day(callback: CallbackQuery):
 # 📢 ОБЪЯВЛЕНИЯ
 # ============================================================
 
+@dp.message(Command("announces"))
 @dp.message(F.text == "📢 Объявления")
 async def announces_cmd(message: Message):
     if not ANNOUNCES:
@@ -983,7 +1010,7 @@ async def show_sos(callback: CallbackQuery):
 
 
 # ============================================================
-# 🏛 О РУК
+# 🏛 О РУК / КОНТАКТЫ / ССЫЛКИ
 # ============================================================
 
 @dp.message(F.text == "🏛 О РУК")
@@ -1026,7 +1053,7 @@ async def links_cmd(message: Message):
 
 
 # ============================================================
-# 🤔 FALLBACK — САМЫМ ПОСЛЕДНИМ
+# 🤔 FALLBACK — САМЫМ ПОСЛЕДНИМ!
 # ============================================================
 
 @dp.message()
